@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from ..database.connection import get_db
@@ -107,7 +108,7 @@ from pydantic import BaseModel
 class PublicContactCreate(BaseModel):
     name: str
     phone: str
-    message: str
+    message: Optional[str] = "General inquiry submitted from website homepage contact form."
 
 @router.post("/public-contact")
 def submit_public_contact(

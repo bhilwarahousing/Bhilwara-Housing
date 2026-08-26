@@ -42,17 +42,14 @@ export default function Contact() {
       await enquiryAPI.submitPublicContact({
         name: form.name,
         phone: form.phone,
-        message: form.message,
+        message: form.message || 'General inquiry submitted from Bhilwara Housing homepage.',
       });
       setSubmitted(true);
       setForm({ name: '', phone: '', message: '' });
       setTimeout(() => setSubmitted(false), 5000);
     } catch (err) {
       console.error('Failed to submit contact form:', err);
-      // Fallback UI success so user is not blocked
-      setSubmitted(true);
-      setForm({ name: '', phone: '', message: '' });
-      setTimeout(() => setSubmitted(false), 5000);
+      alert(err.message || 'Failed to send message. Please try again.');
     } finally {
       setLoading(false);
     }

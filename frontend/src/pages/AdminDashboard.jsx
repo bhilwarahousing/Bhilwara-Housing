@@ -637,19 +637,29 @@ export default function AdminDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="font-serif text-xl font-bold text-navy-900">All Properties Directory</h2>
-                <p className="text-gray-500 text-xs">Full platform inventory across all statuses</p>
+                <p className="text-gray-500 text-xs">Full platform inventory across all statuses ({allProps.length})</p>
               </div>
 
-              {/* Search box */}
-              <div className="relative max-w-xs w-full">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search listings…"
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="input-field text-xs pl-9 py-2"
-                />
+              <div className="flex items-center gap-3">
+                {/* Search box */}
+                <div className="relative max-w-xs w-full">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search listings…"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-white rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <button
+                  onClick={() => setShowAddPropertyModal(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shrink-0 shadow transition-all"
+                >
+                  <Plus size={14} />
+                  <span>Add Property</span>
+                </button>
               </div>
             </div>
 
