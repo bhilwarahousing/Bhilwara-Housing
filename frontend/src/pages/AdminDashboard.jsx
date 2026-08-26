@@ -24,7 +24,8 @@ import {
   Trash2,
   Shield,
   Key,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI, apiRequest } from '../services/api';
@@ -62,6 +63,84 @@ export default function AdminDashboard() {
   });
   const [createUserLoading, setCreateUserLoading] = useState(false);
   const [createUserError, setCreateUserError] = useState('');
+
+  // Edit Property Modal State
+  const [editingProperty, setEditingProperty] = useState(null);
+  const [editPropForm, setEditPropForm] = useState({
+    title: '',
+    listing_type: 'Buy',
+    property_type: 'Villa',
+    price: '',
+    area: '',
+    bedrooms: 3,
+    bathrooms: 2,
+    furnished: 'Semi-Furnished',
+    city: 'Bhilwara',
+    address: '',
+    status: 'APPROVED',
+    description: '',
+    amenities: '',
+  });
+  const [editPropLoading, setEditPropLoading] = useState(false);
+  const [editPropError, setEditPropError] = useState('');
+  const [editPropSuccess, setEditPropSuccess] = useState('');
+
+  const handleOpenEditModal = (prop) => {
+    setEditingProperty(prop);
+    setEditPropForm({
+      title: prop.title || '',
+      listing_type: prop.listing_type || 'Buy',
+      property_type: prop.property_type || 'Villa',
+      price: prop.price || '',
+      area: prop.area || '',
+      bedrooms: prop.bedrooms || 3,
+      bathrooms: prop.bathrooms || 2,
+      furnished: prop.furnished || 'Semi-Furnished',
+      city: prop.city || 'Bhilwara',
+      address: prop.address || '',
+      status: prop.status || 'APPROVED',
+      description: prop.description || '',
+      amenities: prop.amenities || '',
+    });
+    setEditPropError('');
+    setEditPropSuccess('');
+  };
+
+  const handleEditPropSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+    setEditPropLoading(true);
+    setEditPropError('');
+    setEditPropSuccess('');
+
+    try {
+      await adminAPI.updateProperty(editingProperty.id, {
+        title: editPropForm.title,
+        listing_type: editPropForm.listing_type,
+        property_type: editPropForm.property_type,
+        price: parseFloat(editPropForm.price),
+        area: parseFloat(editPropForm.area),
+        bedrooms: parseInt(editPropForm.bedrooms, 10),
+        bathrooms: parseInt(editPropForm.bathrooms, 10),
+        furnished: editPropForm.furnished,
+        city: editPropForm.city,
+        address: editPropForm.address,
+        status: editPropForm.status,
+        description: editPropForm.description,
+        amenities: editPropForm.amenities,
+      });
+
+      setEditPropSuccess('Property updated successfully!');
+      setTimeout(() => {
+        setEditingProperty(null);
+        loadAdminData();
+      }, 1000);
+    } catch (err) {
+      setEditPropError(err.message || 'Failed to update property details.');
+    } finally {
+      setEditPropLoading(false);
+    }
+  };
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -446,15 +525,22 @@ export default function AdminDashboard() {
                         <button
                           onClick={() => handleApprove(prop.id)}
                           disabled={actionLoading === `approve-${prop.id}`}
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow"
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow"
                         >
                           <CheckCircle2 size={15} /> Approve & Publish
                         </button>
 
                         <button
+                          onClick={() => handleOpenEditModal(prop)}
+                          className="flex-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs py-2 rounded-xl border border-indigo-200 flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <Pencil size={14} /> Edit Listing
+                        </button>
+
+                        <button
                           onClick={() => handleReject(prop.id)}
                           disabled={actionLoading === `reject-${prop.id}`}
-                          className="flex-1 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-bold text-xs py-2.5 rounded-xl border border-red-200 hover:border-red-600 flex items-center justify-center gap-2 transition-colors"
+                          className="flex-1 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-bold text-xs py-2 rounded-xl border border-red-200 hover:border-red-600 flex items-center justify-center gap-2 transition-colors"
                         >
                           <XCircle size={15} /> Reject Listing
                         </button>
@@ -539,12 +625,22 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="p-4 text-right">
-                          <Link
-                            to={`/properties/${prop.id}`}
-                            className="inline-block p-2 bg-gray-100 hover:bg-navy-900 hover:text-white rounded-lg text-gray-600 transition-colors"
-                          >
-                            <Eye size={13} />
-                          </Link>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditModal(prop)}
+                              title="Edit Property Details"
+                              className="p-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-lg transition-colors"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <Link
+                              to={`/properties/${prop.id}`}
+                              title="View Property"
+                              className="inline-block p-2 bg-gray-100 hover:bg-navy-900 hover:text-white rounded-lg text-gray-600 transition-colors"
+                            >
+                              <Eye size={13} />
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -926,6 +1022,211 @@ export default function AdminDashboard() {
                   className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow transition-colors disabled:opacity-60"
                 >
                   {createUserLoading ? 'Creating…' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── EDIT PROPERTY MODAL (ADMIN ONLY) ─── */}
+      {editingProperty && (
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-navy-900/70 backdrop-blur-sm" onClick={() => setEditingProperty(null)} />
+          <div className="modal-panel relative w-full max-w-2xl bg-white rounded-3xl p-7 shadow-2xl border border-gray-200 z-10 my-6 animate-slideUp max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setEditingProperty(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1.5 rounded-full"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Pencil size={18} />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl font-bold text-navy-900">Edit Property Details</h3>
+                <p className="text-gray-500 text-xs">Update listing #{editingProperty.id} — {editingProperty.title}</p>
+              </div>
+            </div>
+
+            {editPropError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0" />
+                <span>{editPropError}</span>
+              </div>
+            )}
+
+            {editPropSuccess && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-xs flex items-center gap-2">
+                <CheckCircle2 size={15} className="shrink-0" />
+                <span>{editPropSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleEditPropSubmit} className="mt-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Property Title</label>
+                <input
+                  type="text"
+                  required
+                  value={editPropForm.title}
+                  onChange={(e) => setEditPropForm({ ...editPropForm, title: e.target.value })}
+                  className="input-field text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Listing Type</label>
+                  <select
+                    value={editPropForm.listing_type}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, listing_type: e.target.value })}
+                    className="input-field text-xs bg-gray-50"
+                  >
+                    <option value="Buy">Buy (For Sale)</option>
+                    <option value="Rent">Rent (For Lease)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Property Type</label>
+                  <select
+                    value={editPropForm.property_type}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, property_type: e.target.value })}
+                    className="input-field text-xs bg-gray-50"
+                  >
+                    <option value="Villa">Villa</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="Penthouse">Penthouse</option>
+                    <option value="Plot">Plot</option>
+                    <option value="Commercial">Commercial</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Listing Status</label>
+                  <select
+                    value={editPropForm.status}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, status: e.target.value })}
+                    className="input-field text-xs bg-gray-50 font-bold"
+                  >
+                    <option value="APPROVED">APPROVED (Live)</option>
+                    <option value="PENDING">PENDING (Review)</option>
+                    <option value="REJECTED">REJECTED</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                    <option value="SOLD">SOLD</option>
+                    <option value="RENTED">RENTED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Price (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editPropForm.price}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, price: e.target.value })}
+                    className="input-field text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Area (sq.ft)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editPropForm.area}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, area: e.target.value })}
+                    className="input-field text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Furnishing</label>
+                  <select
+                    value={editPropForm.furnished}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, furnished: e.target.value })}
+                    className="input-field text-xs bg-gray-50"
+                  >
+                    <option value="Semi-Furnished">Semi-Furnished</option>
+                    <option value="Furnished">Fully Furnished</option>
+                    <option value="Unfurnished">Unfurnished</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Bedrooms (BHK)</label>
+                  <input
+                    type="number"
+                    value={editPropForm.bedrooms}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, bedrooms: e.target.value })}
+                    className="input-field text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Bathrooms</label>
+                  <input
+                    type="number"
+                    value={editPropForm.bathrooms}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, bathrooms: e.target.value })}
+                    className="input-field text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Street Address / Locality</label>
+                <input
+                  type="text"
+                  required
+                  value={editPropForm.address}
+                  onChange={(e) => setEditPropForm({ ...editPropForm, address: e.target.value })}
+                  className="input-field text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={editPropForm.description}
+                  onChange={(e) => setEditPropForm({ ...editPropForm, description: e.target.value })}
+                  className="input-field text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Amenities (Comma separated)</label>
+                <input
+                  type="text"
+                  value={editPropForm.amenities}
+                  onChange={(e) => setEditPropForm({ ...editPropForm, amenities: e.target.value })}
+                  placeholder="e.g. Car Parking, Private Garden, 24/7 Security"
+                  className="input-field text-xs"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-gray-100 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProperty(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editPropLoading}
+                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow transition-colors disabled:opacity-60"
+                >
+                  {editPropLoading ? 'Saving Changes…' : 'Save Property Changes'}
                 </button>
               </div>
             </form>

@@ -78,6 +78,7 @@ export const adminAPI = {
   getPending: () => apiRequest('/admin/pending-properties'),
   approve: (id) => apiRequest(`/admin/properties/${id}/approve`, { method: 'PUT' }),
   reject: (id) => apiRequest(`/admin/properties/${id}/reject`, { method: 'PUT' }),
+  updateProperty: (id, propData) => apiRequest(`/admin/properties/${id}`, { method: 'PUT', body: JSON.stringify(propData) }),
   getStats: () => apiRequest('/admin/stats'),
   getUsers: () => apiRequest('/admin/users'),
   createUser: (userData) => apiRequest('/admin/users', { method: 'POST', body: JSON.stringify(userData) }),

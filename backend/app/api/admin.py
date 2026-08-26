@@ -6,7 +6,7 @@ from ..database.connection import get_db
 from ..models.user import User, UserRole
 from ..models.property import Property, PropertyStatus
 from ..models.enquiry import Enquiry
-from ..schemas.property import PropertyResponse
+from ..schemas.property import PropertyResponse, PropertyUpdate
 from ..schemas.user import UserResponse
 from ..auth.jwt import require_role
 from ..services.email_service import notify_property_status_updated, notify_owner_verified
@@ -82,6 +82,28 @@ def reject_property(
         owner_dict = {"name": owner.name, "email": owner.email}
         background_tasks.add_task(notify_property_status_updated, prop_dict, owner_dict, "REJECTED")
 
+    return PropertyResponse.model_validate(prop)
+
+
+@router.put("/properties/{property_id}", response_model=PropertyResponse)
+def admin_update_property(
+    property_id: int,
+    prop_data: PropertyUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["ADMIN"]))
+):
+    """Admin endpoint to edit any property listing details."""
+    prop = db.query(Property).filter(Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found.")
+
+    update_dict = prop_data.model_dump(exclude_unset=True)
+    for field, val in update_dict.items():
+        if val is not None:
+            setattr(prop, field, val)
+
+    db.commit()
+    db.refresh(prop)
     return PropertyResponse.model_validate(prop)
 
 from ..schemas.user import UserResponse, UserRegister
