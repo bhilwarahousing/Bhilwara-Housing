@@ -20,7 +20,7 @@ def seed_database():
             admin_user = User(
                 name="Bhilwara Housing",
                 email="bhilwarahousing@gmail.com",
-                password_hash=get_password_hash("admin123"),
+                password_hash=get_password_hash("Kuna@2007"),
                 role=UserRole.ADMIN.value,
                 phone="+91 96670 62506",
                 is_verified=True
