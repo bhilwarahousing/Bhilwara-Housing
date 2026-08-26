@@ -1,4 +1,5 @@
 import os
+import socket
 import smtplib
 import logging
 from email.mime.multipart import MIMEMultipart
@@ -7,6 +8,12 @@ from typing import Optional, List
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Force IPv4 socket resolution on cloud hosts like Render to prevent '[Errno 101] Network is unreachable'
+_orig_gai = socket.getaddrinfo
+def _ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return _orig_gai(host, port, socket.AF_INET, type, proto, flags)
+socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 logger = logging.getLogger("email_service")
 logging.basicConfig(level=logging.INFO)
