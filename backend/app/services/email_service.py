@@ -184,11 +184,14 @@ def send_email(to_email: str, subject: str, html_body: str, plain_body: Optional
                     "html": html_body,
                     "plain": plain_body
                 },
-                timeout=10.0
+                follow_redirects=True,
+                timeout=12.0
             )
             if res.status_code in (200, 201):
                 logger.info(f"Email successfully delivered via HTTPS Webhook to {to_email}")
                 return True
+            else:
+                logger.warning(f"HTTPS Webhook returned HTTP {res.status_code}: {res.text[:150]}")
         except Exception as webhook_err:
             logger.warning(f"HTTPS Webhook email dispatch failed: {webhook_err}. Retrying via direct socket...")
 
