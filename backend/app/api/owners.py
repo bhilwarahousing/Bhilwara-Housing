@@ -9,7 +9,7 @@ from ..models.favorite import Favorite
 from ..models.appointment import Appointment
 from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
 from ..auth.jwt import require_role
-from ..services.email_service import notify_new_property_submitted, notify_appointment_status_updated, notify_admin_property_status_changed
+from ..services.email_service import notify_new_property_submitted, notify_appointment_status_updated, notify_admin_property_status_changed, notify_property_updated
 
 router = APIRouter(prefix="/owner", tags=["Owner Operations"])
 
@@ -101,6 +101,7 @@ def create_property(
 def update_property(
     property_id: int,
     prop_in: PropertyUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["OWNER", "ADMIN"]))
 ):
@@ -132,6 +133,17 @@ def update_property(
 
     db.commit()
     db.refresh(prop)
+
+    prop_dict = {
+        "id": prop.id,
+        "title": prop.title,
+        "price": prop.price,
+        "city": prop.city,
+        "status": prop.status,
+    }
+    role_label = "Property Owner" if current_user.role == "OWNER" else "Super Admin"
+    background_tasks.add_task(notify_property_updated, prop_dict, role_label)
+
     return PropertyResponse.model_validate(prop)
 
 @router.put("/properties/{property_id}/primary-image", response_model=PropertyResponse)

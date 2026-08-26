@@ -9,7 +9,7 @@ from ..models.enquiry import Enquiry
 from ..schemas.property import PropertyResponse, PropertyUpdate, PropertyCreate
 from ..schemas.user import UserResponse
 from ..auth.jwt import require_role
-from ..services.email_service import notify_property_status_updated, notify_owner_verified
+from ..services.email_service import notify_property_status_updated, notify_owner_verified, notify_owner_deverified, notify_property_updated
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
@@ -134,6 +134,7 @@ def admin_create_property(
 def admin_update_property(
     property_id: int,
     prop_data: PropertyUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["ADMIN"]))
 ):
@@ -162,6 +163,16 @@ def admin_update_property(
 
     db.commit()
     db.refresh(prop)
+
+    prop_dict = {
+        "id": prop.id,
+        "title": prop.title,
+        "price": prop.price,
+        "city": prop.city,
+        "status": prop.status,
+    }
+    background_tasks.add_task(notify_property_updated, prop_dict, "Super Admin")
+
     return PropertyResponse.model_validate(prop)
 
 from ..schemas.user import UserResponse, UserRegister
@@ -273,10 +284,16 @@ def admin_toggle_user_verification(
     db.commit()
     db.refresh(user_to_verify)
 
-    # If verified, send confirmation email
-    if new_verified_status and user_to_verify.email:
+    # Trigger email notifications for verification / deverification
+    if new_verified_status:
         background_tasks.add_task(
             notify_owner_verified,
+            owner_email=user_to_verify.email,
+            owner_name=user_to_verify.name
+        )
+    else:
+        background_tasks.add_task(
+            notify_owner_deverified,
             owner_email=user_to_verify.email,
             owner_name=user_to_verify.name
         )

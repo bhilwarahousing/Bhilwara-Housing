@@ -677,32 +677,126 @@ def send_registration_otp_email(to_email: str, name: str, otp_code: str, role: s
 # ─────────────────────────────────────────────────────────────
 
 def notify_owner_verified(owner_email: str, owner_name: str):
-    """Sends verification confirmation to owner once approved by admin."""
-    html = _build_html_wrapper(
-        title="Owner Account Verified",
-        preheader="Your Bhilwara Housing partner account is now verified",
+    """Sends verification confirmation to owner once approved by admin AND dispatches admin oversight email."""
+    if owner_email and not owner_email.endswith("@bhilwarahousing.com"):
+        html = _build_html_wrapper(
+            title="Owner Account Verified",
+            preheader="Your Bhilwara Housing partner account is now verified",
+            content_html=f"""
+            <span class="badge badge-approved">✓ Verified Partner</span>
+            <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Congratulations {owner_name}!</h2>
+            <p>Your property owner account has been reviewed and <span style="color: #166534; font-weight: bold;">OFFICIALLY VERIFIED</span> by the Bhilwara Housing administration.</p>
+
+            <div class="card" style="background: #f0fdf4; border-color: #bbf7d0;">
+              <h4 style="margin: 0 0 6px 0; color: #166534; font-size: 14px;">🛡️ Verified Owner Benefits:</h4>
+              <ul style="padding-left: 20px; margin: 0; font-size: 13px; color: #14532d;">
+                <li>Your listings now display the <strong>Verified Owner Tick</strong> for higher buyer trust.</li>
+                <li>Priority placement in buyer search results.</li>
+                <li>Permanent active status on the platform.</li>
+              </ul>
+            </div>
+
+            <a href="{APP_URL}/owner/dashboard" class="btn">Open Owner Portal →</a>
+            """
+        )
+        send_email(
+            to_email=owner_email,
+            subject="🎉 [Verified Partner] Your Owner Account is Officially Verified!",
+            html_body=html,
+            plain_body=f"Congratulations {owner_name}! Your Bhilwara Housing owner account has been officially verified."
+        )
+
+    # Admin oversight email
+    admin_html = _build_html_wrapper(
+        title="Owner Verification Action Audit",
+        preheader=f"Owner {owner_name} ({owner_email}) has been verified",
         content_html=f"""
-        <span class="badge badge-approved">✓ Verified Partner</span>
-        <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Congratulations {owner_name}!</h2>
-        <p>Your property owner account has been reviewed and <span style="color: #166534; font-weight: bold;">OFFICIALLY VERIFIED</span> by the Bhilwara Housing administration.</p>
-
-        <div class="card" style="background: #f0fdf4; border-color: #bbf7d0;">
-          <h4 style="margin: 0 0 6px 0; color: #166534; font-size: 14px;">🛡️ Verified Owner Benefits:</h4>
-          <ul style="padding-left: 20px; margin: 0; font-size: 13px; color: #14532d;">
-            <li>Your listings now display the <strong>Verified Owner Tick</strong> for higher buyer trust.</li>
-            <li>Priority placement in buyer search results.</li>
-            <li>Permanent active status on the platform.</li>
-          </ul>
-        </div>
-
-        <a href="{APP_URL}/owner/dashboard" class="btn">Open Owner Portal →</a>
+        <span class="badge badge-approved">Admin Audit • Owner Verified</span>
+        <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Owner Verification Action Completed</h2>
+        <p>The owner account for <strong>{owner_name}</strong> ({owner_email}) has been set to <strong>VERIFIED</strong> status.</p>
+        <a href="{APP_URL}/admin" class="btn">Open Admin Portal →</a>
         """
     )
-    return send_email(
-        to_email=owner_email,
-        subject="🎉 [Verified Partner] Your Owner Account is Officially Verified!",
-        html_body=html,
-        plain_body=f"Congratulations {owner_name}! Your Bhilwara Housing owner account has been officially verified."
+    send_email(
+        to_email=ADMIN_EMAIL,
+        subject=f"🛡️ [ADMIN ACTION] Owner Verified: {owner_name} ({owner_email})",
+        html_body=admin_html,
+        plain_body=f"Owner {owner_name} ({owner_email}) has been verified by Admin."
+    )
+
+
+def notify_owner_deverified(owner_email: str, owner_name: str):
+    """Sends notification to owner and admin when an owner is de-verified."""
+    if owner_email and not owner_email.endswith("@bhilwarahousing.com"):
+        html = _build_html_wrapper(
+            title="Owner Account Status Update",
+            preheader="Your partner verification status has been updated",
+            content_html=f"""
+            <span class="badge badge-pending">Account Status Updated</span>
+            <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Hello {owner_name},</h2>
+            <p>Your property owner partner verification status on Bhilwara Housing has been set to unverified.</p>
+            <a href="{APP_URL}/owner/dashboard" class="btn">Open Owner Portal →</a>
+            """
+        )
+        send_email(
+            to_email=owner_email,
+            subject="ℹ️ [Account Notice] Owner Partner Verification Status Updated",
+            html_body=html,
+            plain_body=f"Hello {owner_name}, your owner account verification status has been updated by administration."
+        )
+
+    # Admin oversight email
+    admin_html = _build_html_wrapper(
+        title="Owner Deverification Action Audit",
+        preheader=f"Owner {owner_name} ({owner_email}) has been de-verified",
+        content_html=f"""
+        <span class="badge badge-pending">Admin Audit • Owner De-verified</span>
+        <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Owner Deverification Action Completed</h2>
+        <p>The owner account for <strong>{owner_name}</strong> ({owner_email}) has been set to <strong>UNVERIFIED</strong> status.</p>
+        <a href="{APP_URL}/admin" class="btn">Open Admin Portal →</a>
+        """
+    )
+    send_email(
+        to_email=ADMIN_EMAIL,
+        subject=f"⚠️ [ADMIN ACTION] Owner De-verified: {owner_name} ({owner_email})",
+        html_body=admin_html,
+        plain_body=f"Owner {owner_name} ({owner_email}) has been set to unverified."
+    )
+
+
+def notify_property_updated(prop_data: dict, updated_by_role: str = "Admin"):
+    """
+    Notifies System Admin and Property Owner whenever a property listing details, price, images, or status are updated.
+    """
+    prop_title = prop_data.get("title", "Property")
+    prop_id = prop_data.get("id")
+    price = prop_data.get("price", 0)
+    city = prop_data.get("city", "Bhilwara")
+    status_val = prop_data.get("status", "UPDATED")
+
+    admin_html = _build_html_wrapper(
+        title="Property Details Updated",
+        preheader=f"Listing '{prop_title}' updated by {updated_by_role}",
+        content_html=f"""
+        <span class="badge badge-approved">Listing Modified • {updated_by_role}</span>
+        <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Property Listing Details Updated</h2>
+        <p>Property listing <strong>'{prop_title}'</strong> (ID #{prop_id}) was updated on <strong>Bhilwara Housing</strong> by {updated_by_role}.</p>
+
+        <div class="card">
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Property Title:</strong> {prop_title}</p>
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Price:</strong> ₹{price:,.0f}</p>
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Location:</strong> {city}</p>
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Current Status:</strong> <span style="font-weight: bold; color: #2563eb;">{status_val}</span></p>
+        </div>
+
+        <a href="{APP_URL}/properties/{prop_id}" class="btn">View Updated Property →</a>
+        """
+    )
+    send_email(
+        to_email=ADMIN_EMAIL,
+        subject=f"📝 [PROPERTY UPDATE] '{prop_title}' updated by {updated_by_role}",
+        html_body=admin_html,
+        plain_body=f"Property '{prop_title}' (ID #{prop_id}) was updated by {updated_by_role}."
     )
 
 
