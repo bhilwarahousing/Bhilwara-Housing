@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from ..database.connection import get_db
 from ..models.user import User, UserRole
-from ..models.property import Property, PropertyStatus
+from ..models.property import Property, PropertyStatus, PropertyImage
 from ..models.enquiry import Enquiry
-from ..schemas.property import PropertyResponse, PropertyUpdate
+from ..schemas.property import PropertyResponse, PropertyUpdate, PropertyCreate
 from ..schemas.user import UserResponse
 from ..auth.jwt import require_role
 from ..services.email_service import notify_property_status_updated, notify_owner_verified
@@ -83,6 +83,51 @@ def reject_property(
         background_tasks.add_task(notify_property_status_updated, prop_dict, owner_dict, "REJECTED")
 
     return PropertyResponse.model_validate(prop)
+
+
+@router.post("/properties", response_model=PropertyResponse, status_code=status.HTTP_201_CREATED)
+def admin_create_property(
+    prop_in: PropertyCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["ADMIN"]))
+):
+    """Admin endpoint to directly create and auto-approve a new property listing."""
+    new_prop = Property(
+        owner_id=current_user.id,
+        title=prop_in.title,
+        description=prop_in.description,
+        property_type=prop_in.property_type,
+        listing_type=prop_in.listing_type,
+        price=prop_in.price,
+        area=prop_in.area,
+        bedrooms=prop_in.bedrooms,
+        bathrooms=prop_in.bathrooms,
+        total_floors=prop_in.total_floors,
+        city=prop_in.city,
+        state=prop_in.state,
+        address=prop_in.address,
+        latitude=prop_in.latitude,
+        longitude=prop_in.longitude,
+        furnished=prop_in.furnished,
+        amenities=prop_in.amenities,
+        status="APPROVED",
+    )
+    db.add(new_prop)
+    db.commit()
+    db.refresh(new_prop)
+
+    if prop_in.images:
+        for idx, img_url in enumerate(prop_in.images):
+            if img_url and img_url.strip():
+                db.add(PropertyImage(
+                    property_id=new_prop.id,
+                    image_url=img_url.strip(),
+                    is_primary=(idx == 0)
+                ))
+        db.commit()
+        db.refresh(new_prop)
+
+    return PropertyResponse.model_validate(new_prop)
 
 
 @router.put("/properties/{property_id}", response_model=PropertyResponse)

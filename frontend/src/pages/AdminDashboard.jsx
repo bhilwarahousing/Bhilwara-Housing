@@ -25,11 +25,13 @@ import {
   Shield,
   Key,
   AlertCircle,
-  Pencil
+  Pencil,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI, apiRequest, uploadImage } from '../services/api';
 import { formatPrice, formatArea } from '../utils/formatters';
+import MultiStepAddProperty from '../components/owner/MultiStepAddProperty';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -52,7 +54,8 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
 
-  // Add User Modal State
+  // Add Property & Add User Modal State
+  const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUserForm, setNewUserForm] = useState({
     name: '',
@@ -471,6 +474,16 @@ export default function AdminDashboard() {
               System Administration
             </h1>
             <p className="text-gray-500 text-xs mt-1">Review owner listings, moderate users, and manage platform growth</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAddPropertyModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow transition-all transform hover:-translate-y-0.5"
+            >
+              <Plus size={15} />
+              <span>Add New Property</span>
+            </button>
           </div>
         </div>
 
@@ -1447,6 +1460,29 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ADD PROPERTY WIZARD MODAL (SUPER ADMIN) ─── */}
+      {showAddPropertyModal && (
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-navy-900/70 backdrop-blur-sm" onClick={() => setShowAddPropertyModal(false)} />
+          <div className="modal-panel relative w-full max-w-4xl bg-white rounded-3xl p-6 shadow-2xl border border-gray-200 z-10 my-4 max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => setShowAddPropertyModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors z-20"
+            >
+              <X size={18} />
+            </button>
+
+            <MultiStepAddProperty
+              onSuccess={() => {
+                setShowAddPropertyModal(false);
+                loadAdminData();
+              }}
+              onCancel={() => setShowAddPropertyModal(false)}
+            />
           </div>
         </div>
       )}
