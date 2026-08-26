@@ -77,3 +77,32 @@ def root():
         "status": "online",
         "docs": "/docs"
     }
+
+from fastapi import Response, Request
+
+@app.get("/sitemap.xml", response_class=Response)
+def dynamic_sitemap(request: Request):
+    """Dynamically serves sitemap.xml matching the exact domain requesting it."""
+    base_url = str(request.base_url).rstrip('/')
+    sitemap_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{base_url}/</loc>
+    <lastmod>2026-08-26</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>{base_url}/properties</loc>
+    <lastmod>2026-08-26</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{base_url}/contact</loc>
+    <lastmod>2026-08-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>"""
+    return Response(content=sitemap_xml, media_type="application/xml")
