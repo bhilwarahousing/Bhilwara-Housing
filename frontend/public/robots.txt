@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /owner
+Disallow: /dashboard
+
+Sitemap: https://bhilwarahousing.vercel.app/sitemap.xml
