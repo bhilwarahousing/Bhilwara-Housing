@@ -98,9 +98,22 @@ def admin_update_property(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found.")
 
     update_dict = prop_data.model_dump(exclude_unset=True)
+    images_list = update_dict.pop("images", None)
+
     for field, val in update_dict.items():
         if val is not None:
             setattr(prop, field, val)
+
+    if images_list is not None:
+        from ..models.property import PropertyImage
+        db.query(PropertyImage).filter(PropertyImage.property_id == prop.id).delete()
+        for idx, img_url in enumerate(images_list):
+            if img_url and img_url.strip():
+                db.add(PropertyImage(
+                    property_id=prop.id,
+                    image_url=img_url.strip(),
+                    is_primary=(idx == 0)
+                ))
 
     db.commit()
     db.refresh(prop)

@@ -43,9 +43,12 @@ class PropertyUpdate(BaseModel):
     total_floors: Optional[int] = None
     city: Optional[str] = None
     address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     furnished: Optional[str] = None
     amenities: Optional[str] = None
     status: Optional[str] = None
+    images: Optional[List[str]] = None
 
 class PropertyResponse(PropertyBase):
     id: int

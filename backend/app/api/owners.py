@@ -114,8 +114,21 @@ def update_property(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found or unauthorized.")
 
     update_data = prop_in.model_dump(exclude_unset=True)
+    images_list = update_data.pop("images", None)
+
     for field, value in update_data.items():
-        setattr(prop, field, value)
+        if value is not None:
+            setattr(prop, field, value)
+
+    if images_list is not None:
+        db.query(PropertyImage).filter(PropertyImage.property_id == prop.id).delete()
+        for idx, img_url in enumerate(images_list):
+            if img_url and img_url.strip():
+                db.add(PropertyImage(
+                    property_id=prop.id,
+                    image_url=img_url.strip(),
+                    is_primary=(idx == 0)
+                ))
 
     db.commit()
     db.refresh(prop)

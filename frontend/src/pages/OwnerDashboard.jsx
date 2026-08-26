@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
-import { ownerAPI, apiRequest } from '../services/api';
+import { ownerAPI, apiRequest, uploadImage } from '../services/api';
 import { formatPrice } from '../utils/formatters';
 import MultiStepAddProperty from '../components/owner/MultiStepAddProperty';
 
@@ -87,11 +87,18 @@ export default function OwnerDashboard() {
     area: '',
     bedrooms: 3,
     bathrooms: 2,
+    total_floors: 1,
     furnished: 'Semi-Furnished',
     city: 'Bhilwara',
     address: '',
+    latitude: 25.3524,
+    longitude: 74.6462,
+    status: 'APPROVED',
     description: '',
     amenities: '',
+    images: [],
+    newImageUrl: '',
+    uploadingImage: false,
   });
   const [editPropLoading, setEditPropLoading] = useState(false);
   const [editPropError, setEditPropError] = useState('');
@@ -99,22 +106,78 @@ export default function OwnerDashboard() {
 
   const handleOpenEditModal = (prop) => {
     setEditingProperty(prop);
+    const existingImages = prop.images && prop.images.length > 0
+      ? prop.images.map(img => img.image_url)
+      : [];
+
     setEditPropForm({
       title: prop.title || '',
       listing_type: prop.listing_type || 'Buy',
       property_type: prop.property_type || 'Villa',
       price: prop.price || '',
       area: prop.area || '',
-      bedrooms: prop.bedrooms || 3,
-      bathrooms: prop.bathrooms || 2,
+      bedrooms: prop.bedrooms !== undefined ? prop.bedrooms : 3,
+      bathrooms: prop.bathrooms !== undefined ? prop.bathrooms : 2,
+      total_floors: prop.total_floors !== undefined ? prop.total_floors : 1,
       furnished: prop.furnished || 'Semi-Furnished',
       city: prop.city || 'Bhilwara',
       address: prop.address || '',
+      latitude: prop.latitude || 25.3524,
+      longitude: prop.longitude || 74.6462,
+      status: prop.status || 'APPROVED',
       description: prop.description || '',
       amenities: prop.amenities || '',
+      images: existingImages,
+      newImageUrl: '',
+      uploadingImage: false,
     });
     setEditPropError('');
     setEditPropSuccess('');
+  };
+
+  const handleAddImageUrl = () => {
+    if (!editPropForm.newImageUrl.trim()) return;
+    setEditPropForm(prev => ({
+      ...prev,
+      images: [...prev.images, prev.newImageUrl.trim()],
+      newImageUrl: ''
+    }));
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditPropForm(prev => ({ ...prev, uploadingImage: true }));
+    setEditPropError('');
+
+    try {
+      const url = await uploadImage(file);
+      setEditPropForm(prev => ({
+        ...prev,
+        images: [...prev.images, url],
+        uploadingImage: false
+      }));
+    } catch (err) {
+      setEditPropError(err.message || 'Image upload failed.');
+      setEditPropForm(prev => ({ ...prev, uploadingImage: false }));
+    }
+  };
+
+  const handleRemoveImage = (index) => {
+    setEditPropForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSetPrimaryImage = (index) => {
+    if (index === 0) return;
+    setEditPropForm(prev => {
+      const newImgs = [...prev.images];
+      const [selected] = newImgs.splice(index, 1);
+      newImgs.unshift(selected);
+      return { ...prev, images: newImgs };
+    });
   };
 
   const handleEditPropSubmit = async (e) => {
@@ -133,14 +196,19 @@ export default function OwnerDashboard() {
         area: parseFloat(editPropForm.area),
         bedrooms: parseInt(editPropForm.bedrooms, 10),
         bathrooms: parseInt(editPropForm.bathrooms, 10),
+        total_floors: parseInt(editPropForm.total_floors, 10),
         furnished: editPropForm.furnished,
         city: editPropForm.city,
         address: editPropForm.address,
+        latitude: editPropForm.latitude ? parseFloat(editPropForm.latitude) : 25.3524,
+        longitude: editPropForm.longitude ? parseFloat(editPropForm.longitude) : 74.6462,
+        status: editPropForm.status,
         description: editPropForm.description,
         amenities: editPropForm.amenities,
+        images: editPropForm.images,
       });
 
-      setEditPropSuccess('Listing updated successfully!');
+      setEditPropSuccess('Listing details updated successfully!');
       setTimeout(() => {
         setEditingProperty(null);
         loadOwnerData();
@@ -1374,7 +1442,35 @@ export default function OwnerDashboard() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Status Section: Text & Interactive Badges */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1.5">Listing Status (Text & Interactive Selector)</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {[
+                    { status: 'APPROVED', label: 'APPROVED (Live)', color: 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border-green-300' },
+                    { status: 'PENDING', label: 'PENDING (Review)', color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300' },
+                    { status: 'REJECTED', label: 'REJECTED', color: 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 border-red-300' },
+                    { status: 'ARCHIVED', label: 'ARCHIVED', color: 'bg-gray-100 dark:bg-navy-800 text-gray-800 dark:text-gray-300 border-gray-300' },
+                    { status: 'SOLD', label: 'SOLD', color: 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border-purple-300' },
+                    { status: 'RENTED', label: 'RENTED', color: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 border-indigo-300' },
+                  ].map((st) => (
+                    <button
+                      key={st.status}
+                      type="button"
+                      onClick={() => setEditPropForm({ ...editPropForm, status: st.status })}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                        editPropForm.status === st.status
+                          ? `${st.color} shadow-sm ring-2 ring-gold-500 scale-105`
+                          : 'bg-gray-50 dark:bg-navy-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Listing Type</label>
                   <select
@@ -1401,9 +1497,22 @@ export default function OwnerDashboard() {
                     <option value="Commercial">Commercial</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Furnishing</label>
+                  <select
+                    value={editPropForm.furnished}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, furnished: e.target.value })}
+                    className="input-field text-xs bg-gray-50 dark:bg-navy-800"
+                  >
+                    <option value="Semi-Furnished">Semi-Furnished</option>
+                    <option value="Furnished">Fully Furnished</option>
+                    <option value="Unfurnished">Unfurnished</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Price (₹)</label>
                   <input
@@ -1425,22 +1534,9 @@ export default function OwnerDashboard() {
                     className="input-field text-xs"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Furnishing</label>
-                  <select
-                    value={editPropForm.furnished}
-                    onChange={(e) => setEditPropForm({ ...editPropForm, furnished: e.target.value })}
-                    className="input-field text-xs bg-gray-50 dark:bg-navy-800"
-                  >
-                    <option value="Semi-Furnished">Semi-Furnished</option>
-                    <option value="Furnished">Fully Furnished</option>
-                    <option value="Unfurnished">Unfurnished</option>
-                  </select>
-                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Bedrooms (BHK)</label>
                   <input
@@ -1460,6 +1556,17 @@ export default function OwnerDashboard() {
                     className="input-field text-xs"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Total Floors (Floor No.)</label>
+                  <input
+                    type="number"
+                    value={editPropForm.total_floors}
+                    onChange={(e) => setEditPropForm({ ...editPropForm, total_floors: e.target.value })}
+                    placeholder="e.g. 1, 2, 3"
+                    className="input-field text-xs font-bold text-navy-900 dark:text-white"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1471,6 +1578,135 @@ export default function OwnerDashboard() {
                   onChange={(e) => setEditPropForm({ ...editPropForm, address: e.target.value })}
                   className="input-field text-xs"
                 />
+              </div>
+
+              {/* Map Coordinates & Quick Jump Section */}
+              <div className="bg-gray-50 dark:bg-navy-800/60 p-4 rounded-2xl border border-gray-200 dark:border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-1.5">
+                    <MapPin size={14} className="text-gold-500" /> Map Coordinates & Locality
+                  </span>
+                  <span className="text-[11px] text-gray-400">Updates position on interactive map</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-0.5">Latitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editPropForm.latitude}
+                      onChange={(e) => setEditPropForm({ ...editPropForm, latitude: e.target.value })}
+                      className="input-field text-xs bg-white dark:bg-navy-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-0.5">Longitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editPropForm.longitude}
+                      onChange={(e) => setEditPropForm({ ...editPropForm, longitude: e.target.value })}
+                      className="input-field text-xs bg-white dark:bg-navy-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Quick Set:</span>
+                  {[
+                    { name: 'RC Vyas', lat: 25.3524, lng: 74.6462 },
+                    { name: 'Shastri Nagar', lat: 25.3480, lng: 74.6390 },
+                    { name: 'Subhash Nagar', lat: 25.3350, lng: 74.6300 },
+                    { name: 'Tilak Nagar', lat: 25.3620, lng: 74.6550 },
+                  ].map((loc) => (
+                    <button
+                      key={loc.name}
+                      type="button"
+                      onClick={() => setEditPropForm({ ...editPropForm, latitude: loc.lat, longitude: loc.lng })}
+                      className="text-[10px] bg-white dark:bg-navy-900 border border-gray-300 dark:border-white/10 hover:border-gold-500 hover:text-gold-500 px-2.5 py-1 rounded-lg font-bold transition-colors"
+                    >
+                      📍 {loc.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Property Image Management Section */}
+              <div className="bg-gray-50 dark:bg-navy-800/60 p-4 rounded-2xl border border-gray-200 dark:border-white/10 space-y-3">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Manage Property Images ({editPropForm.images.length})</label>
+                
+                {/* Upload File or Add URL */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">Upload New Image File</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      disabled={editPropForm.uploadingImage}
+                      className="text-xs text-gray-600 dark:text-gray-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gold-500 file:text-navy-950 hover:file:bg-gold-600 cursor-pointer"
+                    />
+                    {editPropForm.uploadingImage && <span className="text-[11px] text-gold-500 font-bold ml-2">Uploading image...</span>}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">Or Add Image Web URL</label>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/..."
+                        value={editPropForm.newImageUrl}
+                        onChange={(e) => setEditPropForm({ ...editPropForm, newImageUrl: e.target.value })}
+                        className="input-field text-xs bg-white dark:bg-navy-900 py-1.5"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddImageUrl}
+                        className="px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-navy-950 rounded-xl text-xs font-bold shrink-0"
+                      >
+                        Add URL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thumbnails Gallery */}
+                {editPropForm.images.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic text-center py-2">No images uploaded yet</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    {editPropForm.images.map((imgUrl, idx) => (
+                      <div key={idx} className="relative group rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-navy-900 aspect-video shadow-sm">
+                        <img src={imgUrl} alt={`Property ${idx + 1}`} className="w-full h-full object-cover" />
+                        {idx === 0 && (
+                          <span className="absolute top-1.5 left-1.5 bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                            ⭐ Cover
+                          </span>
+                        )}
+                        <div className="absolute inset-0 bg-navy-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
+                          {idx !== 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimaryImage(idx)}
+                              className="text-[10px] bg-white text-navy-900 font-bold px-2 py-1 rounded-lg hover:bg-gold-400 transition-colors"
+                            >
+                              Make Cover
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            title="Remove Image"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
