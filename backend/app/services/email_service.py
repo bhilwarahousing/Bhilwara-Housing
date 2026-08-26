@@ -165,17 +165,39 @@ def send_email(to_email: str, subject: str, html_body: str, plain_body: Optional
         return True
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_USER, [to_email], msg.as_string())
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=12) as server:
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=12) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.sendmail(SMTP_USER, [to_email], msg.as_string())
         logger.info(f"Email successfully delivered to {to_email} with subject: '{subject}'")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
-        return False
+        logger.warning(f"Primary email dispatch to {to_email} on port {SMTP_PORT} failed: {e}. Retrying via fallback port...")
+        try:
+            fallback_port = 465 if SMTP_PORT != 465 else 587
+            if fallback_port == 465:
+                with smtplib.SMTP_SSL(SMTP_HOST, 465, timeout=12) as server:
+                    server.login(SMTP_USER, SMTP_PASSWORD)
+                    server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            else:
+                with smtplib.SMTP(SMTP_HOST, 587, timeout=12) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(SMTP_USER, SMTP_PASSWORD)
+                    server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            logger.info(f"Email successfully delivered to {to_email} via fallback port {fallback_port}!")
+            return True
+        except Exception as e2:
+            logger.error(f"Fallback email dispatch also failed to {to_email}: {e2}")
+            return False
 
 
 # ─────────────────────────────────────────────────────────────
