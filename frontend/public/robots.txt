@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /owner
 Disallow: /dashboard
 
-Sitemap: https://bhilwarahousing.vercel.app/sitemap.xml
+Sitemap: https://bhilwara-housing.vercel.app/sitemap.xml
