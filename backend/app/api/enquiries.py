@@ -122,3 +122,73 @@ def submit_public_contact(
         contact_in.message
     )
     return {"status": "success", "message": "Enquiry dispatched to system admin."}
+
+
+class GuestEnquiryCreate(BaseModel):
+    property_id: int
+    name: str
+    phone: str
+    email: str = None
+    message: str
+
+@router.post("/guest")
+def send_guest_enquiry(
+    enquiry_in: GuestEnquiryCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """Allows unauthenticated website guests to send an enquiry for a specific property."""
+    prop = db.query(Property).filter(Property.id == enquiry_in.property_id).first()
+    if not prop:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found.")
+
+    clean_phone = enquiry_in.phone.strip()
+    guest_email = (enquiry_in.email or f"guest_{clean_phone.replace(' ', '').replace('+', '').replace('-', '')}@bhilwarahousing.com").lower().strip()
+    
+    guest_user = db.query(User).filter((User.email == guest_email) | (User.phone == clean_phone)).first()
+    if not guest_user:
+        from ..auth.security import get_password_hash
+        guest_user = User(
+            name=enquiry_in.name,
+            email=guest_email,
+            phone=clean_phone,
+            password_hash=get_password_hash("guest123"),
+            role="USER",
+            is_verified=True
+        )
+        db.add(guest_user)
+        db.commit()
+        db.refresh(guest_user)
+
+    new_enquiry = Enquiry(
+        user_id=guest_user.id,
+        property_id=prop.id,
+        owner_id=prop.owner_id,
+        message=enquiry_in.message,
+        phone=clean_phone,
+        status="PENDING"
+    )
+    db.add(new_enquiry)
+    db.commit()
+    db.refresh(new_enquiry)
+
+    # Trigger emails to Owner, Buyer, and Admin
+    owner = db.query(User).filter(User.id == prop.owner_id).first()
+    enq_dict = {
+        "id": new_enquiry.id,
+        "message": new_enquiry.message,
+        "phone": new_enquiry.phone,
+    }
+    prop_dict = {"id": prop.id, "title": prop.title}
+    owner_dict = {
+        "name": owner.name if owner else "Owner",
+        "email": owner.email if owner else "",
+    }
+    buyer_dict = {
+        "name": enquiry_in.name,
+        "email": enquiry_in.email or guest_user.email,
+        "phone": clean_phone,
+    }
+    background_tasks.add_task(notify_new_enquiry, enq_dict, prop_dict, owner_dict, buyer_dict)
+
+    return {"status": "success", "message": "Enquiry submitted successfully!"}

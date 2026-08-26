@@ -57,6 +57,7 @@ export const userAPI = {
 
 export const enquiryAPI = {
   sendEnquiry: (data) => apiRequest('/enquiries', { method: 'POST', body: JSON.stringify(data) }),
+  sendGuestEnquiry: (data) => apiRequest('/enquiries/guest', { method: 'POST', body: JSON.stringify(data) }),
   scheduleAppointment: (data) => apiRequest('/enquiries/appointments', { method: 'POST', body: JSON.stringify(data) }),
   submitPublicContact: (data) => apiRequest('/enquiries/public-contact', { method: 'POST', body: JSON.stringify(data) }),
 };

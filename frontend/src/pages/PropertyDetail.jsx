@@ -23,7 +23,7 @@ import {
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AuthModal from '../components/AuthModal';
-import { propertyAPI, userAPI, apiRequest } from '../services/api';
+import { propertyAPI, userAPI, enquiryAPI, apiRequest } from '../services/api';
 import { formatPrice, formatArea } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -42,6 +42,7 @@ export default function PropertyDetail() {
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' });
 
   // Enquiry & Appointment state
+  const [enquiryName, setEnquiryName] = useState(user?.name || '');
   const [enquiryMsg, setEnquiryMsg] = useState('');
   const [enquiryPhone, setEnquiryPhone] = useState(user?.phone || '');
   const [enquirySuccess, setEnquirySuccess] = useState(false);
@@ -85,21 +86,34 @@ export default function PropertyDetail() {
 
   const handleSendEnquiry = async (e) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      setAuthModal({ open: true, mode: 'login' });
+
+    if (!enquiryPhone.trim()) {
+      alert('Please enter your phone number so the property owner can contact you.');
       return;
     }
 
     setSubmittingEnquiry(true);
     try {
-      await apiRequest('/enquiries', {
-        method: 'POST',
-        body: JSON.stringify({
+      if (isAuthenticated) {
+        await enquiryAPI.sendEnquiry({
           property_id: property.id,
-          message: enquiryMsg,
+          message: enquiryMsg || 'I am interested in this property. Please share details.',
           phone: enquiryPhone,
-        }),
-      });
+        });
+      } else {
+        if (!enquiryName.trim()) {
+          alert('Please enter your full name.');
+          setSubmittingEnquiry(false);
+          return;
+        }
+        await enquiryAPI.sendGuestEnquiry({
+          property_id: property.id,
+          name: enquiryName,
+          phone: enquiryPhone,
+          message: enquiryMsg || 'I am interested in this property. Please share details.',
+        });
+      }
+
       setEnquirySuccess(true);
       setEnquiryMsg('');
       setTimeout(() => setEnquirySuccess(false), 5000);
@@ -514,8 +528,22 @@ export default function PropertyDetail() {
                     </div>
                   ) : (
                     <form onSubmit={handleSendEnquiry} className="space-y-4">
+                      {!isAuthenticated && (
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1.5">Your Full Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={enquiryName}
+                            onChange={(e) => setEnquiryName(e.target.value)}
+                            placeholder="e.g. Ramesh Kumar"
+                            className="input-field text-xs"
+                          />
+                        </div>
+                      )}
+
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">Phone Number</label>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1.5">Phone Number</label>
                         <input
                           type="tel"
                           required
