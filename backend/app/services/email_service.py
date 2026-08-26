@@ -330,92 +330,101 @@ def notify_new_enquiry(enquiry_data: dict, prop_data: dict, owner_data: dict, bu
     owner_email = owner_data.get("email", "")
 
     # ── A. Email to Owner ──
-    if owner_email:
-        owner_html = _build_html_wrapper(
-            title="New Buyer Enquiry Received",
-            preheader=f"New enquiry from {buyer_name} for {prop_title}",
-            content_html=f"""
-            <span class="badge badge-enquiry">New Buyer Enquiry</span>
-            <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Namaste {owner_name},</h2>
-            <p>A buyer has sent an enquiry regarding your listing <strong>'{prop_title}'</strong>.</p>
+    if owner_email and not owner_email.endswith("@bhilwarahousing.com"):
+        try:
+            owner_html = _build_html_wrapper(
+                title="New Buyer Enquiry Received",
+                preheader=f"New enquiry from {buyer_name} for {prop_title}",
+                content_html=f"""
+                <span class="badge badge-enquiry">New Buyer Enquiry</span>
+                <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Namaste {owner_name},</h2>
+                <p>A buyer has sent an enquiry regarding your listing <strong>'{prop_title}'</strong>.</p>
 
-            <div class="card">
-              <h4 style="margin: 0 0 10px 0; color: #0b192c;">Buyer Information:</h4>
-              <p style="margin: 4px 0; font-size: 13px;"><strong>Name:</strong> {buyer_name}</p>
-              <p style="margin: 4px 0; font-size: 13px;"><strong>Phone:</strong> <a href="tel:{buyer_phone}" style="color: #2563eb; font-weight: bold;">{buyer_phone}</a></p>
-              {f'<p style="margin: 4px 0; font-size: 13px;"><strong>Email:</strong> {buyer_email}</p>' if buyer_email else ''}
-              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 12px 0;">
-              <p style="margin: 0; font-size: 13px;"><strong>Buyer Message:</strong></p>
-              <p style="margin: 6px 0 0 0; font-style: italic; color: #334155; font-size: 13px; background: #ffffff; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                "{message}"
-              </p>
-            </div>
+                <div class="card">
+                  <h4 style="margin: 0 0 10px 0; color: #0b192c;">Buyer Information:</h4>
+                  <p style="margin: 4px 0; font-size: 13px;"><strong>Name:</strong> {buyer_name}</p>
+                  <p style="margin: 4px 0; font-size: 13px;"><strong>Phone:</strong> <a href="tel:{buyer_phone}" style="color: #2563eb; font-weight: bold;">{buyer_phone}</a></p>
+                  {f'<p style="margin: 4px 0; font-size: 13px;"><strong>Email:</strong> {buyer_email}</p>' if buyer_email and not buyer_email.endswith("@bhilwarahousing.com") else ''}
+                  <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 12px 0;">
+                  <p style="margin: 0; font-size: 13px;"><strong>Buyer Message:</strong></p>
+                  <p style="margin: 6px 0 0 0; font-style: italic; color: #334155; font-size: 13px; background: #ffffff; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                    "{message}"
+                  </p>
+                </div>
 
-            <a href="{APP_URL}/owner/dashboard" class="btn">View Enquiry & Reply →</a>
-            """
-        )
-        send_email(
-            to_email=owner_email,
-            subject=f"📩 [New Enquiry] {buyer_name} inquired about '{prop_title}'",
-            html_body=owner_html,
-            plain_body=f"New enquiry from {buyer_name} ({buyer_phone}) for '{prop_title}': {message}"
-        )
+                <a href="{APP_URL}/owner/dashboard" class="btn">View Enquiry & Reply →</a>
+                """
+            )
+            send_email(
+                to_email=owner_email,
+                subject=f"📩 [New Enquiry] {buyer_name} inquired about '{prop_title}'",
+                html_body=owner_html,
+                plain_body=f"New enquiry from {buyer_name} ({buyer_phone}) for '{prop_title}': {message}"
+            )
+        except Exception as err:
+            logger.error(f"Failed owner notification email: {err}")
 
     # ── B. Email to Buyer (Receipt) ──
-    if buyer_email:
-        buyer_html = _build_html_wrapper(
-            title="Enquiry Sent Successfully",
-            preheader=f"Your enquiry for {prop_title} was delivered to the owner",
+    if buyer_email and not buyer_email.endswith("@bhilwarahousing.com"):
+        try:
+            buyer_html = _build_html_wrapper(
+                title="Enquiry Sent Successfully",
+                preheader=f"Your enquiry for {prop_title} was delivered to the owner",
+                content_html=f"""
+                <span class="badge badge-approved">Enquiry Sent</span>
+                <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Hello {buyer_name},</h2>
+                <p>Your enquiry for <strong>'{prop_title}'</strong> has been sent to the property owner.</p>
+
+                <div class="card">
+                  <p style="margin: 4px 0; font-size: 13px;"><strong>Property:</strong> {prop_title}</p>
+                  <p style="margin: 4px 0; font-size: 13px;"><strong>Your Message:</strong> "{message}"</p>
+                </div>
+
+                <p style="font-size: 13px; color: #475569;">The owner has your contact details and will reach out to you shortly. You can also view and track all your active enquiries from your dashboard.</p>
+                <a href="{APP_URL}/dashboard" class="btn">Go to Buyer Dashboard →</a>
+                """
+            )
+            send_email(
+                to_email=buyer_email,
+                subject=f"✅ Enquiry Sent: {prop_title} (Bhilwara Housing)",
+                html_body=buyer_html,
+                plain_body=f"Hello {buyer_name}, your enquiry for '{prop_title}' was sent to the owner."
+            )
+        except Exception as err:
+            logger.error(f"Failed buyer notification email: {err}")
+
+    # ── C. Email to Admin (Platform Monitoring) ──
+    try:
+        admin_html = _build_html_wrapper(
+            title="New Property Enquiry Alert",
+            preheader=f"Buyer enquiry for {prop_title} ({owner_name})",
             content_html=f"""
-            <span class="badge badge-approved">Enquiry Sent</span>
-            <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Hello {buyer_name},</h2>
-            <p>Your enquiry for <strong>'{prop_title}'</strong> has been sent to the property owner.</p>
+            <span class="badge badge-enquiry">Platform Monitoring • Buyer Enquiry</span>
+            <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">New Property Enquiry Received</h2>
+            <p>A buyer has inquired about a property listing on <strong>Bhilwara Housing</strong>.</p>
 
             <div class="card">
-              <p style="margin: 4px 0; font-size: 13px;"><strong>Property:</strong> {prop_title}</p>
-              <p style="margin: 4px 0; font-size: 13px;"><strong>Your Message:</strong> "{message}"</p>
+              <h4 style="margin: 0 0 8px 0; color: #0b192c;">Property: {prop_title}</h4>
+              <p style="margin: 4px 0; font-size: 13px;"><strong>Listed By Owner:</strong> {owner_name} ({owner_email or 'No email'})</p>
+              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 12px 0;">
+              <h4 style="margin: 0 0 8px 0; color: #0b192c;">Buyer Information:</h4>
+              <p style="margin: 4px 0; font-size: 13px;"><strong>Buyer Name:</strong> {buyer_name}</p>
+              <p style="margin: 4px 0; font-size: 13px;"><strong>Buyer Phone:</strong> <a href="tel:{buyer_phone}">{buyer_phone}</a></p>
+              {f'<p style="margin: 4px 0; font-size: 13px;"><strong>Buyer Email:</strong> {buyer_email}</p>' if buyer_email and not buyer_email.endswith("@bhilwarahousing.com") else ''}
+              <p style="margin: 8px 0 0 0; font-size: 13px;"><strong>Message:</strong> "{message}"</p>
             </div>
 
-            <p style="font-size: 13px; color: #475569;">The owner has your contact details and will reach out to you shortly. You can also view and track all your active enquiries from your dashboard.</p>
-            <a href="{APP_URL}/dashboard" class="btn">Go to Buyer Dashboard →</a>
+            <a href="{APP_URL}/admin" class="btn">View Admin Portal →</a>
             """
         )
         send_email(
-            to_email=buyer_email,
-            subject=f"✅ Enquiry Sent: {prop_title} (Bhilwara Housing)",
-            html_body=buyer_html,
-            plain_body=f"Hello {buyer_name}, your enquiry for '{prop_title}' was sent to the owner."
+            to_email=ADMIN_EMAIL,
+            subject=f"📩 [ADMIN OVERSIGHT] Enquiry for '{prop_title}' from {buyer_name}",
+            html_body=admin_html,
+            plain_body=f"New enquiry for '{prop_title}' from {buyer_name} ({buyer_phone}): {message}"
         )
-
-    # ── C. Email to Admin (Platform Monitoring) ──
-    admin_html = _build_html_wrapper(
-        title="New Property Enquiry Alert",
-        preheader=f"Buyer enquiry for {prop_title} ({owner_name})",
-        content_html=f"""
-        <span class="badge badge-enquiry">Platform Monitoring • Buyer Enquiry</span>
-        <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">New Property Enquiry Received</h2>
-        <p>A buyer has inquired about a property listing on <strong>Bhilwara Housing</strong>.</p>
-
-        <div class="card">
-          <h4 style="margin: 0 0 8px 0; color: #0b192c;">Property: {prop_title}</h4>
-          <p style="margin: 4px 0; font-size: 13px;"><strong>Listed By Owner:</strong> {owner_name} ({owner_email or 'No email'})</p>
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 12px 0;">
-          <h4 style="margin: 0 0 8px 0; color: #0b192c;">Buyer Information:</h4>
-          <p style="margin: 4px 0; font-size: 13px;"><strong>Buyer Name:</strong> {buyer_name}</p>
-          <p style="margin: 4px 0; font-size: 13px;"><strong>Buyer Phone:</strong> <a href="tel:{buyer_phone}">{buyer_phone}</a></p>
-          {f'<p style="margin: 4px 0; font-size: 13px;"><strong>Buyer Email:</strong> {buyer_email}</p>' if buyer_email else ''}
-          <p style="margin: 8px 0 0 0; font-size: 13px;"><strong>Message:</strong> "{message}"</p>
-        </div>
-
-        <a href="{APP_URL}/admin" class="btn">View Admin Portal →</a>
-        """
-    )
-    send_email(
-        to_email=ADMIN_EMAIL,
-        subject=f"📩 [ADMIN OVERSIGHT] Enquiry for '{prop_title}' from {buyer_name}",
-        html_body=admin_html,
-        plain_body=f"Buyer {buyer_name} ({buyer_phone}) inquired about '{prop_title}' (Owner: {owner_name})."
-    )
+    except Exception as err:
+        logger.error(f"Failed admin oversight email: {err}")
 
 
 # ─────────────────────────────────────────────────────────────
