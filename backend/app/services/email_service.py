@@ -23,6 +23,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
 SMTP_USER = os.getenv("SMTP_USER", "bhilwarahousing@gmail.com")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "bhilwarahousing@gmail.com")
+EMAIL_WEBHOOK_URL = os.getenv("EMAIL_WEBHOOK_URL", "")
 APP_URL = os.getenv("APP_URL", "http://localhost:3000")
 SENDER_NAME = "Bhilwara Housing"
 
@@ -161,8 +162,8 @@ def send_email(to_email: str, subject: str, html_body: str, plain_body: Optional
     msg.attach(MIMEText(plain_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 
-    # If SMTP password is not set, log email to console for development
-    if not SMTP_PASSWORD:
+    # If SMTP password & Webhook are not set, log email to console for development
+    if not SMTP_PASSWORD and not EMAIL_WEBHOOK_URL:
         logger.info(
             f"\n[EMAIL DISPATCH - DEV SIMULATION]\n"
             f"To: {to_email}\n"
@@ -170,6 +171,26 @@ def send_email(to_email: str, subject: str, html_body: str, plain_body: Optional
             f"Body preview:\n{plain_body[:200]}...\n"
         )
         return True
+
+    # 0. HTTPS Webhook Email Dispatch (Bypasses cloud host SMTP port blocking over standard HTTPS Port 443)
+    if EMAIL_WEBHOOK_URL:
+        try:
+            import httpx
+            res = httpx.post(
+                EMAIL_WEBHOOK_URL,
+                json={
+                    "to": to_email,
+                    "subject": subject,
+                    "html": html_body,
+                    "plain": plain_body
+                },
+                timeout=10.0
+            )
+            if res.status_code in (200, 201):
+                logger.info(f"Email successfully delivered via HTTPS Webhook to {to_email}")
+                return True
+        except Exception as webhook_err:
+            logger.warning(f"HTTPS Webhook email dispatch failed: {webhook_err}. Retrying via direct socket...")
 
     # Resolve IPv4 IP directly to prevent '[Errno 101] Network is unreachable' on cloud hosts like Render
     try:
