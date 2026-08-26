@@ -19,7 +19,7 @@ export default function Contact() {
       icon: Phone,
       label: 'Phone Numbers',
       phones: [
-        { label: '+91 96672 62506', href: 'tel:+919667262506' },
+        { label: '+91 96670 62506', href: 'tel:+919667062506' },
         { label: '+91 97994 34091', href: 'tel:+919799434091' },
       ],
     },

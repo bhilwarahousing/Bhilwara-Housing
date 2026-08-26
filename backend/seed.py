@@ -22,7 +22,7 @@ def seed_database():
                 email="bhilwarahousing@gmail.com",
                 password_hash=get_password_hash("admin123"),
                 role=UserRole.ADMIN.value,
-                phone="+91 96672 62506",
+                phone="+91 96670 62506",
                 is_verified=True
             )
             db.add(admin_user)

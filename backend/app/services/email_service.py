@@ -125,7 +125,7 @@ def _build_html_wrapper(title: str, preheader: str, content_html: str) -> str:
         </div>
         <div class="footer">
           <p style="margin: 0 0 6px 0;">Office: RC Vyas Colony, Bhilwara, Rajasthan</p>
-          <p style="margin: 0 0 6px 0;">Helpline: <a href="tel:+919667262506">+91 96672 62506</a> | <a href="tel:+919799434091">+91 97994 34091</a></p>
+          <p style="margin: 0 0 6px 0;">Helpline: <a href="tel:+919667062506">+91 96670 62506</a> | <a href="tel:+919799434091">+91 97994 34091</a></p>
           <p style="margin: 0;">Email: <a href="mailto:bhilwarahousing@gmail.com">bhilwarahousing@gmail.com</a></p>
         </div>
       </div>

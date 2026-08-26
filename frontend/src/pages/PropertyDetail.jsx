@@ -460,7 +460,7 @@ export default function PropertyDetail() {
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <a
-                  href={property.owner_phone ? `tel:${property.owner_phone}` : "tel:+919667262506"}
+                  href={property.owner_phone ? `tel:${property.owner_phone}` : "tel:+919667062506"}
                   className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 py-2.5 rounded-xl text-white font-semibold transition-colors"
                 >
                   <Phone size={13} /> {t('owner.call_buyer')}
