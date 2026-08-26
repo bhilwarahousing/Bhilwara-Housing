@@ -258,7 +258,9 @@ def get_admin_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["ADMIN"]))
 ):
-    """Retrieve platform-wide overview statistics."""
+    """Retrieve live platform-wide overview statistics directly from database."""
+    from sqlalchemy import func
+
     total_users = db.query(User).filter(User.role == UserRole.USER.value).count()
     total_owners = db.query(User).filter(User.role == UserRole.OWNER.value).count()
     total_properties = db.query(Property).count()
@@ -266,6 +268,27 @@ def get_admin_stats(
     approved_properties = db.query(Property).filter(Property.status == PropertyStatus.APPROVED.value).count()
     archived_properties = db.query(Property).filter(Property.status == PropertyStatus.ARCHIVED.value).count()
     total_enquiries = db.query(Enquiry).count()
+
+    # Live Marketplace Ratio (Buy vs Rent)
+    buy_count = db.query(Property).filter(Property.listing_type == "Buy").count()
+    rent_count = db.query(Property).filter(Property.listing_type == "Rent").count()
+    total_for_ratio = buy_count + rent_count
+
+    buy_pct = round((buy_count / total_for_ratio) * 100) if total_for_ratio > 0 else 0
+    rent_pct = round((rent_count / total_for_ratio) * 100) if total_for_ratio > 0 else 0
+
+    # Live Top Locations from listed properties
+    top_locs_query = (
+        db.query(Property.address, Property.city, func.count(Property.id).label("count"))
+        .group_by(Property.address, Property.city)
+        .order_by(func.count(Property.id).desc())
+        .limit(5)
+        .all()
+    )
+    top_locations = [
+        {"location": f"{loc[0]}, {loc[1]}" if loc[0] else loc[1], "count": loc[2]}
+        for loc in top_locs_query
+    ]
 
     return {
         "total_users": total_users,
@@ -275,6 +298,11 @@ def get_admin_stats(
         "approved_properties": approved_properties,
         "archived_properties": archived_properties,
         "total_enquiries": total_enquiries,
+        "buy_count": buy_count,
+        "rent_count": rent_count,
+        "buy_pct": buy_pct,
+        "rent_pct": rent_pct,
+        "top_locations": top_locations,
     }
 
 

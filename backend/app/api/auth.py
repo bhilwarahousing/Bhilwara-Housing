@@ -189,7 +189,8 @@ def register(
 @router.post("/login", response_model=Token)
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """Authenticate user with email and password, returning JWT token & user role."""
-    user = db.query(User).filter(User.email == credentials.email).first()
+    clean_email = credentials.email.strip().lower()
+    user = db.query(User).filter(User.email == clean_email).first()
     if not user or not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -30,7 +30,8 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   const login = async (email, password) => {
-    const data = await authAPI.login({ email, password });
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const data = await authAPI.login({ email: cleanEmail, password });
     localStorage.setItem('bh_token', data.access_token);
     localStorage.setItem('bh_user', JSON.stringify(data.user));
     setToken(data.access_token);

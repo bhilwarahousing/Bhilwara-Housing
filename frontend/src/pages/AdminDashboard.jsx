@@ -735,23 +735,33 @@ export default function AdminDashboard() {
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between text-gray-600">
                     <span>Properties For Buy:</span>
-                    <span className="font-bold text-navy-900">80%</span>
+                    <span className="font-bold text-navy-900">
+                      {stats.buy_pct !== undefined ? `${stats.buy_pct}%` : '0%'} ({stats.buy_count || 0})
+                    </span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Properties For Rent:</span>
-                    <span className="font-bold text-navy-900">20%</span>
+                    <span className="font-bold text-navy-900">
+                      {stats.rent_pct !== undefined ? `${stats.rent_pct}%` : '0%'} ({stats.rent_count || 0})
+                    </span>
                   </div>
                 </div>
               </div>
 
               <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
                 <h3 className="font-bold text-navy-900 text-sm">Top Locations</h3>
-                <div className="space-y-2 text-xs text-gray-600">
-                  <p>1. Shastri Nagar, Bhilwara</p>
-                  <p>2. RC Vyas Colony, Bhilwara</p>
-                  <p>3. Subhash Nagar, Bhilwara</p>
-                  <p>4. Tilak Nagar, Bhilwara</p>
-                </div>
+                {(!stats.top_locations || stats.top_locations.length === 0) ? (
+                  <p className="text-xs text-gray-400 italic">No property locations listed yet</p>
+                ) : (
+                  <div className="space-y-2 text-xs text-gray-600">
+                    {stats.top_locations.map((loc, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <span className="truncate">{idx + 1}. {loc.location}</span>
+                        <span className="font-bold text-navy-900 shrink-0 ml-2">{loc.count} {loc.count === 1 ? 'prop' : 'props'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
