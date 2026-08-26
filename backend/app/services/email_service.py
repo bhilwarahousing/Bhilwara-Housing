@@ -171,18 +171,31 @@ def send_email(to_email: str, subject: str, html_body: str, plain_body: Optional
         )
         return True
 
+    # Resolve IPv4 IP directly to prevent '[Errno 101] Network is unreachable' on cloud hosts like Render
+    try:
+        ipv4_ip = socket.gethostbyname(SMTP_HOST)
+    except Exception as resolve_err:
+        logger.warning(f"Could not resolve IPv4 IP for {SMTP_HOST}, using hostname directly: {resolve_err}")
+        ipv4_ip = SMTP_HOST
+
     try:
         if SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=12) as server:
-                server.login(SMTP_USER, SMTP_PASSWORD)
-                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            server = smtplib.SMTP_SSL(timeout=12)
+            server._host = SMTP_HOST
+            server.connect(ipv4_ip, SMTP_PORT)
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            server.quit()
         else:
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=12) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(SMTP_USER, SMTP_PASSWORD)
-                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            server = smtplib.SMTP(timeout=12)
+            server._host = SMTP_HOST
+            server.connect(ipv4_ip, SMTP_PORT)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            server.quit()
         logger.info(f"Email successfully delivered to {to_email} with subject: '{subject}'")
         return True
     except Exception as e:
@@ -190,16 +203,22 @@ def send_email(to_email: str, subject: str, html_body: str, plain_body: Optional
         try:
             fallback_port = 465 if SMTP_PORT != 465 else 587
             if fallback_port == 465:
-                with smtplib.SMTP_SSL(SMTP_HOST, 465, timeout=12) as server:
-                    server.login(SMTP_USER, SMTP_PASSWORD)
-                    server.sendmail(SMTP_USER, [to_email], msg.as_string())
+                server = smtplib.SMTP_SSL(timeout=12)
+                server._host = SMTP_HOST
+                server.connect(ipv4_ip, 465)
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+                server.quit()
             else:
-                with smtplib.SMTP(SMTP_HOST, 587, timeout=12) as server:
-                    server.ehlo()
-                    server.starttls()
-                    server.ehlo()
-                    server.login(SMTP_USER, SMTP_PASSWORD)
-                    server.sendmail(SMTP_USER, [to_email], msg.as_string())
+                server = smtplib.SMTP(timeout=12)
+                server._host = SMTP_HOST
+                server.connect(ipv4_ip, 587)
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+                server.quit()
             logger.info(f"Email successfully delivered to {to_email} via fallback port {fallback_port}!")
             return True
         except Exception as e2:
