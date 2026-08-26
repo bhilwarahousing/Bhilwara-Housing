@@ -1,0 +1,34 @@
+# Dependencies
+frontend/node_modules/
+node_modules/
+
+# Production build output
+frontend/dist/
+dist/
+
+# Python cache & virtual environments
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+backend/bhilwara.db
+
+# IDE & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
