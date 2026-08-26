@@ -13,7 +13,7 @@ export default function Contact() {
     {
       icon: MapPin,
       label: 'Office Address',
-      value: '3-A-56 R.C. Vyas Colony, Bhilwara',
+      value: 'RC Vyas Colony, Bhilwara',
     },
     {
       icon: Phone,

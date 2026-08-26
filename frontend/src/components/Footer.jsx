@@ -66,7 +66,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2.5">
                 <MapPin size={14} className="text-gold-400 shrink-0" />
-                <span>3-A-56 R.C. Vyas Colony, Bhilwara</span>
+                <span>RC Vyas Colony, Bhilwara</span>
               </div>
             </div>
 
