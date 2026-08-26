@@ -64,6 +64,7 @@ export const enquiryAPI = {
 export const ownerAPI = {
   getProperties: () => apiRequest('/owner/properties'),
   createProperty: (propData) => apiRequest('/owner/properties', { method: 'POST', body: JSON.stringify(propData) }),
+  updateProperty: (id, propData) => apiRequest(`/owner/properties/${id}`, { method: 'PUT', body: JSON.stringify(propData) }),
   markSold: (id) => apiRequest(`/owner/properties/${id}/mark-sold`, { method: 'PUT' }),
   markAvailable: (id) => apiRequest(`/owner/properties/${id}/mark-available`, { method: 'PUT' }),
   getStats: () => apiRequest('/owner/stats'),
