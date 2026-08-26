@@ -9,7 +9,7 @@ from ..models.enquiry import Enquiry
 from ..schemas.property import PropertyResponse, PropertyUpdate, PropertyCreate
 from ..schemas.user import UserResponse
 from ..auth.jwt import require_role
-from ..services.email_service import notify_property_status_updated, notify_owner_verified, notify_owner_deverified, notify_property_updated
+from ..services.email_service import notify_property_status_updated, notify_owner_verified, notify_owner_deverified, notify_property_updated, notify_user_deleted
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
@@ -220,6 +220,7 @@ def admin_create_user(
 @router.delete("/users/{user_id}", status_code=status.HTTP_200_OK)
 def admin_delete_user(
     user_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["ADMIN"]))
 ):
@@ -237,9 +238,23 @@ def admin_delete_user(
             detail="User not found."
         )
 
+    del_email = user_to_delete.email
+    del_name = user_to_delete.name
+    del_role = user_to_delete.role
+    del_phone = user_to_delete.phone
+
     db.delete(user_to_delete)
     db.commit()
-    return {"success": True, "message": f"User {user_to_delete.email} has been deleted successfully."}
+
+    background_tasks.add_task(
+        notify_user_deleted,
+        user_email=del_email,
+        user_name=del_name,
+        user_role=del_role,
+        user_phone=del_phone
+    )
+
+    return {"success": True, "message": f"User {del_email} has been deleted successfully."}
 
 @router.put("/users/{user_id}/role", response_model=UserResponse)
 def admin_update_user_role(

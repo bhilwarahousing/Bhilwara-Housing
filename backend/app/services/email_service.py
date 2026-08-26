@@ -917,3 +917,54 @@ def notify_admin_general_contact(name: str, phone: str, message: str):
     )
 
 
+def notify_user_deleted(user_email: str, user_name: str, user_role: str, user_phone: str = ""):
+    """
+    Notifies System Admin and User whenever an account is deleted by administration.
+    """
+    # 1. Email to deleted user (if valid email)
+    if user_email and not user_email.endswith("@bhilwarahousing.com"):
+        user_html = _build_html_wrapper(
+            title="Account Closure Notice",
+            preheader="Your Bhilwara Housing account has been closed",
+            content_html=f"""
+            <span class="badge badge-pending">Account Closed</span>
+            <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">Hello {user_name},</h2>
+            <p>Your <strong>{user_role}</strong> account registered under <strong>{user_email}</strong> on Bhilwara Housing has been removed by system administration.</p>
+            <p style="font-size: 13px; color: #475569;">If you believe this was an error or wish to re-register, please contact support at <a href="mailto:bhilwarahousing@gmail.com">bhilwarahousing@gmail.com</a>.</p>
+            """
+        )
+        send_email(
+            to_email=user_email,
+            subject="ℹ️ [Account Notice] Bhilwara Housing Account Removal",
+            html_body=user_html,
+            plain_body=f"Hello {user_name}, your Bhilwara Housing account ({user_email}) has been removed by administration."
+        )
+
+    # 2. Email to Admin oversight
+    admin_html = _build_html_wrapper(
+        title="User Account Deletion Audit",
+        preheader=f"Account deleted: {user_name} ({user_email})",
+        content_html=f"""
+        <span class="badge badge-pending">Admin Audit • Account Deleted</span>
+        <h2 style="color: #0b192c; margin-top: 12px; font-size: 20px;">User Account Permanently Deleted</h2>
+        <p>A user account was permanently deleted from <strong>Bhilwara Housing</strong> by Super Admin.</p>
+
+        <div class="card" style="background: #fef2f2; border-color: #fca5a5;">
+          <h4 style="margin: 0 0 6px 0; color: #991b1b; font-size: 14px;">Deleted Account Profile:</h4>
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Name:</strong> {user_name}</p>
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Email:</strong> {user_email}</p>
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Role:</strong> {user_role}</p>
+          <p style="margin: 4px 0; font-size: 13px;"><strong>Phone:</strong> {user_phone or 'Not provided'}</p>
+        </div>
+
+        <a href="{APP_URL}/admin" class="btn">Open Admin Portal →</a>
+        """
+    )
+    send_email(
+        to_email=ADMIN_EMAIL,
+        subject=f"🗑️ [ADMIN ACTION] Account Deleted: {user_name} ({user_email})",
+        html_body=admin_html,
+        plain_body=f"Account deleted: {user_name} ({user_email}, Role: {user_role})."
+    )
+
+
